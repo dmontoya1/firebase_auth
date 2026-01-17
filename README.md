@@ -303,6 +303,57 @@ curl -X POST http://localhost:8000/onboarding/register-company \
 - ✅ Transacciones atómicas en onboarding
 - ⚠️ **NUNCA** commitees archivos de credenciales (`.gitignore` configurado)
 
+## 🧪 Testing
+
+### Ejecutar Tests
+
+```bash
+# Instalar dependencias de testing (ya incluidas en requirements.txt)
+pip install -r requirements.txt
+
+# Ejecutar todos los tests
+pytest
+
+# Ejecutar tests con verbose
+pytest -v
+
+# Ejecutar tests con cobertura
+pytest --cov=app --cov-report=html
+
+# Ejecutar un test específico
+pytest tests/test_config.py
+
+# Ejecutar tests asíncronos
+pytest tests/test_database.py -v
+```
+
+### Estructura de Tests
+
+```
+tests/
+├── __init__.py
+├── conftest.py              # Configuración compartida y fixtures
+├── test_config.py           # Tests de configuración
+├── test_database.py          # Tests de base de datos y Session Manager
+├── test_models.py            # Tests de modelos
+├── test_secret_manager.py    # Tests de Secret Manager
+├── test_middleware.py        # Tests de middleware de autenticación
+├── test_routers.py           # Tests de routers
+├── test_dependencies.py      # Tests de dependencias
+└── fixtures/                # Archivos de prueba
+```
+
+### Cobertura de Tests
+
+Los tests cubren:
+- ✅ Configuración y validación de settings
+- ✅ Session Manager y RLS
+- ✅ Modelos de base de datos
+- ✅ Utilidades de Secret Manager
+- ✅ Middleware de autenticación
+- ✅ Routers (health, onboarding)
+- ✅ Dependencias de FastAPI
+
 ## 📚 Recursos y Documentación
 
 ### Documentación del Proyecto
