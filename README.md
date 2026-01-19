@@ -4,11 +4,13 @@ Microservicio altamente reutilizable y configurable para autenticación y onboar
 
 ## 🏗️ Arquitectura
 
-- **Framework**: FastAPI (Python 3.10+)
+- **Framework**: FastAPI (Python 3.12.x requerido)
 - **Base de Datos**: PostgreSQL (Google Cloud SQL) con Row Level Security (RLS)
 - **ORM**: SQLAlchemy 2.0 (Async) + Alembic
 - **Autenticación**: Google Cloud Identity Platform (Firebase Admin SDK)
 - **Multi-tenant**: Base de datos compartida con discriminador de columna y RLS
+
+**⚠️ Requisito de Python**: Este proyecto requiere **Python 3.12.x** (no 3.13) debido a incompatibilidades con versiones específicas de `asyncpg` y `pydantic-core`.
 
 ## 📁 Estructura del Proyecto
 
@@ -47,13 +49,37 @@ firebase_auth/
 
 ### 1. Clonar y configurar entorno
 
+Tienes dos opciones para instalar las dependencias:
+
+#### Opción A: Usando `uv` (Recomendado - Más rápido)
+
+```bash
+# Crear entorno virtual con Python 3.12 (requerido)
+uv venv --python 3.12.6
+
+# Activar el entorno
+source .venv/bin/activate  # En Windows: .venv\Scripts\activate
+
+# Instalar dependencias
+uv pip install -r requirements.txt
+```
+
+**Nota importante**: Este proyecto requiere **Python 3.12** (no 3.13) debido a incompatibilidades con `asyncpg==0.29.0` y `pydantic-core==2.14.1`. El archivo `.python-version` está configurado para usar Python 3.12.6.
+
+#### Opción B: Usando `pip` tradicional
+
 ```bash
 # Crear entorno virtual
-python3.10 -m venv venv
+python3.12 -m venv venv
 source venv/bin/activate  # En Windows: venv\Scripts\activate
 
 # Instalar dependencias
 pip install -r requirements.txt
+```
+
+**⚠️ Requisito de versión**: Asegúrate de usar **Python 3.12.x** (no 3.13). Puedes verificar tu versión con:
+```bash
+python --version
 ```
 
 ### 2. Configurar variables de entorno
@@ -120,6 +146,9 @@ Tienes dos opciones para las credenciales de Firebase:
 ### 4. Configurar base de datos
 
 ```bash
+# Asegúrate de tener el entorno virtual activado
+source .venv/bin/activate  # En Windows: .venv\Scripts\activate
+
 # Crear base de datos PostgreSQL
 createdb auth_db
 
@@ -132,6 +161,9 @@ alembic upgrade head
 **IMPORTANTE**: Debes ejecutar el script SQL como **superusuario** de PostgreSQL:
 
 ```bash
+# Asegúrate de tener el entorno virtual activado
+source .venv/bin/activate  # En Windows: .venv\Scripts\activate
+
 # Generar el SQL de políticas RLS
 python scripts/generate_rls_policies.py
 
@@ -153,6 +185,10 @@ psql -h localhost -U postgres -d auth_db
 ### Iniciar el servidor
 
 ```bash
+# Asegúrate de tener el entorno virtual activado
+source .venv/bin/activate  # En Windows: .venv\Scripts\activate
+
+# Iniciar el servidor
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -242,6 +278,9 @@ class MiModelo(TenantAwareModel):
 2. Ejecuta migración:
 
 ```bash
+# Asegúrate de tener el entorno virtual activado
+source .venv/bin/activate  # En Windows: .venv\Scripts\activate
+
 alembic revision --autogenerate -m "crear tabla mi_tabla"
 alembic upgrade head
 ```
@@ -251,6 +290,9 @@ alembic upgrade head
 ## 🔄 Migraciones de Base de Datos
 
 ```bash
+# Asegúrate de tener el entorno virtual activado
+source .venv/bin/activate  # En Windows: .venv\Scripts\activate
+
 # Crear nueva migración
 alembic revision --autogenerate -m "descripción del cambio"
 
@@ -294,6 +336,31 @@ curl -X POST http://localhost:8000/onboarding/register-company \
 | `ENVIRONMENT` | Entorno (development/production) | ❌ |
 | `DEBUG` | Modo debug | ❌ |
 
+## ⚙️ Requisitos del Sistema
+
+- **Python**: 3.12.x (no 3.13) - Verifica con `python --version`
+- **PostgreSQL**: 12+ (para soporte de RLS)
+- **Google Cloud SDK**: Para usar Secret Manager (opcional)
+- **uv** (opcional pero recomendado): Para instalación más rápida de dependencias
+
+### Verificar versión de Python
+
+```bash
+python --version  # Debe mostrar Python 3.12.x
+```
+
+Si tienes Python 3.13 instalado, puedes usar `pyenv` o `uv` para instalar Python 3.12:
+
+```bash
+# Con pyenv
+pyenv install 3.12.6
+pyenv local 3.12.6
+
+# Con uv
+uv python install 3.12.6
+uv python pin 3.12.6
+```
+
 ## 🛡️ Seguridad
 
 - ✅ Autenticación mediante Firebase Identity Platform
@@ -308,7 +375,13 @@ curl -X POST http://localhost:8000/onboarding/register-company \
 ### Ejecutar Tests
 
 ```bash
-# Instalar dependencias de testing (ya incluidas en requirements.txt)
+# Asegúrate de tener el entorno virtual activado
+source .venv/bin/activate  # En Windows: .venv\Scripts\activate
+
+# Las dependencias de testing ya están incluidas en requirements.txt
+# Si usas uv:
+uv pip install -r requirements.txt
+# O si usas pip tradicional:
 pip install -r requirements.txt
 
 # Ejecutar todos los tests
@@ -375,9 +448,41 @@ Los tests cubren:
 Este microservicio está diseñado para ser **altamente reutilizable**. Para usarlo en otro proyecto:
 
 1. Copia la estructura del proyecto
-2. Ajusta las variables de entorno
-3. Personaliza los modelos según tus necesidades
-4. Agrega tus propios endpoints
+2. Asegúrate de usar Python 3.12.x
+3. Crea un entorno virtual: `uv venv --python 3.12.6` o `python3.12 -m venv venv`
+4. Instala las dependencias: `uv pip install -r requirements.txt` o `pip install -r requirements.txt`
+5. Ajusta las variables de entorno
+6. Personaliza los modelos según tus necesidades
+7. Agrega tus propios endpoints
+
+## 🔧 Troubleshooting
+
+### Error: "asyncpg no se puede compilar con Python 3.13"
+
+**Solución**: Usa Python 3.12.x. El proyecto está configurado para usar Python 3.12.6 mediante el archivo `.python-version`.
+
+```bash
+# Verificar versión actual
+python --version
+
+# Si tienes 3.13, instala 3.12.6
+uv python install 3.12.6
+uv venv --python 3.12.6
+```
+
+### Error: "pydantic-core falla al compilar"
+
+**Solución**: Asegúrate de usar Python 3.12.x y las versiones exactas especificadas en `requirements.txt`.
+
+### Error con `uv pip install`
+
+**Solución**: Crea un entorno virtual explícito con la versión correcta de Python:
+
+```bash
+uv venv --python 3.12.6
+source .venv/bin/activate
+uv pip install -r requirements.txt
+```
 
 ## 📄 Licencia
 
