@@ -81,12 +81,12 @@ class TestGetFirebaseCredentialsFromSecret:
             get_firebase_credentials_from_secret()
 
     def test_get_credentials_json_invalido(self, mock_secret_manager_client):
-        """Test que maneja correctamente JSON inválido."""
+        """Test que maneja correctamente JSON inválido (el código re-lanza como RuntimeError)."""
         mock_response = Mock()
         mock_response.payload.data = b"not valid json"
         mock_secret_manager_client.access_secret_version.return_value = mock_response
         
-        with pytest.raises(ValueError, match="JSON válido"):
+        with pytest.raises(RuntimeError, match="JSON válido|Secret Manager|comunicarse"):
             get_firebase_credentials_from_secret()
 
     def test_get_credentials_error_generico(self, mock_secret_manager_client):

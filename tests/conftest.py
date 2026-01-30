@@ -76,8 +76,8 @@ def mock_firebase_app():
 
 @pytest.fixture
 def mock_firebase_auth():
-    """Mock del módulo auth de Firebase."""
-    with patch("firebase_admin.auth") as mock_auth:
+    """Mock del módulo auth de Firebase (parchear donde se usa en el middleware)."""
+    with patch("app.middleware.auth_middleware.auth") as mock_auth:
         yield mock_auth
 
 

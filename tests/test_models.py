@@ -12,10 +12,8 @@ class TestTenantAwareModel:
     """Tests para TenantAwareModel."""
 
     def test_tenant_aware_model_es_abstracto(self):
-        """Test que TenantAwareModel es abstracto."""
-        # Intentar crear una instancia directa debería fallar
-        with pytest.raises(TypeError):
-            TenantAwareModel()
+        """Test que TenantAwareModel está marcado como abstracto (no crea tabla)."""
+        assert TenantAwareModel.__abstract__ is True
 
     def test_tenant_aware_model_tiene_tenant_id_column(self):
         """Test que TenantAwareModel tiene columna tenant_id."""

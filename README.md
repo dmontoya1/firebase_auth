@@ -49,9 +49,9 @@ firebase_auth/
 
 ### 1. Clonar y configurar entorno
 
-Tienes dos opciones para instalar las dependencias:
+Este proyecto usa **uv** para el entorno; instala dependencias con `uv pip install -r requirements.txt`.
 
-#### Opción A: Usando `uv` (Recomendado - Más rápido)
+#### Opción A: Usando `uv` (recomendado)
 
 ```bash
 # Crear entorno virtual con Python 3.12 (requerido)
@@ -66,7 +66,7 @@ uv pip install -r requirements.txt
 
 **Nota importante**: Este proyecto requiere **Python 3.12** (no 3.13) debido a incompatibilidades con `asyncpg==0.29.0` y `pydantic-core==2.14.1`. El archivo `.python-version` está configurado para usar Python 3.12.6.
 
-#### Opción B: Usando `pip` tradicional
+#### Opción B: Usando `pip` tradicional (si no usas uv)
 
 ```bash
 # Crear entorno virtual
@@ -76,6 +76,8 @@ source venv/bin/activate  # En Windows: venv\Scripts\activate
 # Instalar dependencias
 pip install -r requirements.txt
 ```
+
+**Nota**: Este proyecto se configuró con **uv**; se recomienda usar `uv pip install -r requirements.txt` para instalar dependencias.
 
 **⚠️ Requisito de versión**: Asegúrate de usar **Python 3.12.x** (no 3.13). Puedes verificar tu versión con:
 ```bash
@@ -392,11 +394,8 @@ uv python pin 3.12.6
 # Asegúrate de tener el entorno virtual activado
 source .venv/bin/activate  # En Windows: .venv\Scripts\activate
 
-# Las dependencias de testing ya están incluidas en requirements.txt
-# Si usas uv:
+# Las dependencias de testing ya están incluidas en requirements.txt (entorno con uv)
 uv pip install -r requirements.txt
-# O si usas pip tradicional:
-pip install -r requirements.txt
 
 # Ejecutar todos los tests
 pytest
@@ -464,7 +463,7 @@ Este microservicio está diseñado para ser **altamente reutilizable**. Para usa
 1. Copia la estructura del proyecto
 2. Asegúrate de usar Python 3.12.x
 3. Crea un entorno virtual: `uv venv --python 3.12.6` o `python3.12 -m venv venv`
-4. Instala las dependencias: `uv pip install -r requirements.txt` o `pip install -r requirements.txt`
+4. Instala las dependencias: `uv pip install -r requirements.txt` (o `pip install -r requirements.txt` si no usas uv)
 5. Ajusta las variables de entorno
 6. Personaliza los modelos según tus necesidades
 7. Agrega tus propios endpoints

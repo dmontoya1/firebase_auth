@@ -1,7 +1,7 @@
 """Tests para app.dependencies."""
 
 import pytest
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock, AsyncMock, patch
 from fastapi import Request
 
 from app.dependencies import get_tenant_id, get_db_with_tenant

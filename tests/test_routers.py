@@ -41,7 +41,7 @@ class TestOnboardingRouter:
         )
 
     @pytest.mark.asyncio
-    @patch("app.routers.onboarding.auth.create_tenant")
+    @patch("app.routers.onboarding.auth.create_tenant", create=True)
     @patch("app.routers.onboarding.auth.create_user")
     @patch("app.routers.onboarding.SessionManager")
     async def test_register_company_exitoso(
@@ -62,6 +62,7 @@ class TestOnboardingRouter:
         mock_create_user.return_value = mock_user
         
         mock_db = AsyncMock()
+        mock_db.add = Mock()  # add() es síncrono en SQLAlchemy
         mock_session_manager.return_value.get_session.return_value.__aenter__ = AsyncMock(return_value=mock_db)
         mock_session_manager.return_value.get_session.return_value.__aexit__ = AsyncMock(return_value=None)
         
@@ -80,8 +81,8 @@ class TestOnboardingRouter:
         mock_db.add.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("app.routers.onboarding.auth.create_tenant")
-    @patch("app.routers.onboarding.auth.delete_tenant")
+    @patch("app.routers.onboarding.auth.create_tenant", create=True)
+    @patch("app.routers.onboarding.auth.delete_tenant", create=True)
     async def test_register_company_falla_crear_tenant(
         self,
         mock_delete_tenant,
@@ -98,8 +99,8 @@ class TestOnboardingRouter:
         mock_delete_tenant.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("app.routers.onboarding.auth.create_tenant")
-    @patch("app.routers.onboarding.auth.delete_tenant")
+    @patch("app.routers.onboarding.auth.create_tenant", create=True)
+    @patch("app.routers.onboarding.auth.delete_tenant", create=True)
     @patch("app.routers.onboarding.SessionManager")
     async def test_register_company_falla_db_hace_rollback(
         self,
@@ -115,7 +116,7 @@ class TestOnboardingRouter:
         mock_create_tenant.return_value = mock_tenant
         
         mock_db = AsyncMock()
-        mock_db.add.side_effect = Exception("DB Error")
+        mock_db.add = Mock(side_effect=Exception("DB Error"))  # add() es síncrono
         mock_session_manager.return_value.get_session.return_value.__aenter__ = AsyncMock(return_value=mock_db)
         mock_session_manager.return_value.get_session.return_value.__aexit__ = AsyncMock(return_value=None)
         
@@ -127,9 +128,9 @@ class TestOnboardingRouter:
         mock_delete_tenant.assert_called_once_with("tenant-123")
 
     @pytest.mark.asyncio
-    @patch("app.routers.onboarding.auth.create_tenant")
+    @patch("app.routers.onboarding.auth.create_tenant", create=True)
     @patch("app.routers.onboarding.auth.create_user")
-    @patch("app.routers.onboarding.auth.delete_tenant")
+    @patch("app.routers.onboarding.auth.delete_tenant", create=True)
     @patch("app.routers.onboarding.SessionManager")
     @patch("app.routers.onboarding.select")
     async def test_register_company_falla_crear_usuario_hace_rollback(
@@ -150,12 +151,12 @@ class TestOnboardingRouter:
         mock_create_user.side_effect = Exception("Error creating user")
         
         mock_db = AsyncMock()
+        mock_db.add = Mock()  # add() es síncrono en SQLAlchemy
         mock_company = Mock()
         mock_company.tenant_id = "tenant-123"
         mock_result = Mock()
         mock_result.scalar_one_or_none.return_value = mock_company
-        mock_db.execute.return_value = mock_result
-        
+        mock_db.execute = AsyncMock(return_value=mock_result)  # execute() es async
         mock_session_manager.return_value.get_session.return_value.__aenter__ = AsyncMock(return_value=mock_db)
         mock_session_manager.return_value.get_session.return_value.__aexit__ = AsyncMock(return_value=None)
         

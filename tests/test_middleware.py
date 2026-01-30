@@ -14,13 +14,15 @@ class TestGetFirebaseApp:
 
     @patch("app.middleware.auth_middleware._firebase_app", None)
     @patch("firebase_admin.initialize_app")
+    @patch("app.middleware.auth_middleware.credentials.Certificate")
     @patch("app.middleware.auth_middleware.get_firebase_credentials_from_secret")
-    def test_get_firebase_app_con_secret_manager(self, mock_get_secret, mock_init, monkeypatch):
+    def test_get_firebase_app_con_secret_manager(self, mock_get_secret, mock_cert, mock_init, monkeypatch):
         """Test que inicializa Firebase con Secret Manager."""
         monkeypatch.setattr("app.config.settings.use_secret_manager", True)
         
         mock_credentials = {"type": "service_account"}
         mock_get_secret.return_value = mock_credentials
+        mock_cert.return_value = Mock()
         mock_app = Mock()
         mock_init.return_value = mock_app
         
@@ -28,6 +30,7 @@ class TestGetFirebaseApp:
         
         assert result == mock_app
         mock_get_secret.assert_called_once()
+        mock_cert.assert_called_once_with(mock_credentials)
         mock_init.assert_called_once()
 
     @patch("app.middleware.auth_middleware._firebase_app", None)
@@ -61,10 +64,11 @@ class TestAuthMiddleware:
 
     @pytest.fixture
     def mock_request(self):
-        """Fixture para crear request mock."""
+        """Fixture para crear request mock (headers como Mock para poder setear return_value)."""
         request = Mock(spec=Request)
         request.url.path = "/test"
-        request.headers = {}
+        request.headers = Mock()
+        request.headers.get = Mock(return_value=None)
         request.state = Mock()
         return request
 
@@ -195,7 +199,7 @@ class TestAuthMiddleware:
         mock_call_next = AsyncMock()
         
         mock_firebase_auth.verify_id_token.side_effect = (
-            firebase_auth.ExpiredIdTokenError("Token expired")
+            firebase_auth.ExpiredIdTokenError("Token expired", cause=Exception("expired"))
         )
         
         response = await middleware.dispatch(mock_request, mock_call_next)

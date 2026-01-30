@@ -7,6 +7,7 @@ from typing import Callable
 
 import firebase_admin
 from firebase_admin import auth, credentials
+from firebase_admin.auth import ExpiredIdTokenError, InvalidIdTokenError
 from fastapi import Request, Response, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -159,13 +160,13 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 f"(tenant: {tenant_id})"
             )
 
-        except auth.InvalidIdTokenError as e:
+        except InvalidIdTokenError as e:
             logger.warning(f"Token inválido: {str(e)}")
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 content={"detail": "Token de autenticación inválido"},
             )
-        except auth.ExpiredIdTokenError:
+        except ExpiredIdTokenError:
             logger.warning("Token expirado")
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
