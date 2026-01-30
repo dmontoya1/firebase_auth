@@ -1,7 +1,9 @@
 """Modelo de la tabla Company (Tenant)."""
 
-from sqlalchemy import Column, String, Text
+from sqlalchemy import PrimaryKeyConstraint, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
+from app.config import settings
 from app.models.base import TenantAwareModel
 
 
@@ -14,24 +16,25 @@ class Company(TenantAwareModel):
     """
 
     __tablename__ = "companies"
+    __table_args__ = (PrimaryKeyConstraint(settings.tenant_id_column_name),)
 
     # El tenant_id ya está incluido por TenantAwareModel
-    name = Column(
+    name: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
         comment="Nombre de la empresa",
     )
-    display_name = Column(
+    display_name: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
         comment="Nombre para mostrar de la empresa",
     )
-    description = Column(
+    description: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment="Descripción de la empresa",
     )
-    status = Column(
+    status: Mapped[str] = mapped_column(
         String(50),
         default="active",
         nullable=False,

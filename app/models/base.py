@@ -1,10 +1,9 @@
 """Modelo base con soporte multi-tenant."""
 
 from datetime import datetime
-from typing import Any
 
-from sqlalchemy import Column, DateTime, String
-from sqlalchemy.orm import declared_attr
+from sqlalchemy import DateTime, String
+from sqlalchemy.orm import Mapped, declared_attr, mapped_column
 
 from app.config import settings
 from app.database import Base
@@ -23,9 +22,9 @@ class TenantAwareModel(Base):
     __abstract__ = True
 
     @declared_attr
-    def tenant_id(cls) -> Column[str]:
+    def tenant_id(cls) -> Mapped[str]:
         """Columna discriminadora de tenant configurable."""
-        return Column(
+        return mapped_column(
             String(255),
             nullable=False,
             name=settings.tenant_id_column_name,
@@ -34,9 +33,9 @@ class TenantAwareModel(Base):
         )
 
     @declared_attr
-    def created_at(cls) -> Column[datetime]:
+    def created_at(cls) -> Mapped[datetime]:
         """Timestamp de creación del registro."""
-        return Column(
+        return mapped_column(
             DateTime(timezone=True),
             default=datetime.utcnow,
             nullable=False,
@@ -44,9 +43,9 @@ class TenantAwareModel(Base):
         )
 
     @declared_attr
-    def updated_at(cls) -> Column[datetime]:
+    def updated_at(cls) -> Mapped[datetime]:
         """Timestamp de última actualización."""
-        return Column(
+        return mapped_column(
             DateTime(timezone=True),
             default=datetime.utcnow,
             onupdate=datetime.utcnow,
