@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import close_db, init_db
 from app.middleware.auth_middleware import AuthMiddleware, get_firebase_app
-from app.routers import health, onboarding
+from app.routers import example, health, onboarding
 
 # Configurar logging
 logging.basicConfig(
@@ -74,6 +74,7 @@ app.add_middleware(AuthMiddleware)
 # Incluir routers
 app.include_router(health.router)
 app.include_router(onboarding.router)
+app.include_router(example.router)
 
 
 @app.get("/")

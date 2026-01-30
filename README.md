@@ -194,6 +194,20 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 El servicio estará disponible en: `http://localhost:8000`
 
+### Probar con Postman (flujo completo)
+
+En la carpeta `postman/` hay una colección para probar el flujo completo:
+
+1. **Registrar compañía** → crea tenant, empresa y usuario admin.
+2. **Login Firebase** → obtiene un token con el usuario de esa compañía (requiere configurar `firebase_api_key` en el entorno).
+3. **My Company** → endpoint protegido que devuelve la empresa del tenant (usa el token).
+
+- Importa `postman/firebase_auth_api.postman_collection.json` y `postman/firebase_auth_local.postman_environment.json`.
+- Configura la variable `firebase_api_key` (Web API Key de Firebase Console).
+- Orden recomendado: Register Company → Login Firebase → My Company.
+
+Ver `postman/README.md` para más detalles.
+
 ### Documentación API
 
 - **Swagger UI**: http://localhost:8000/docs

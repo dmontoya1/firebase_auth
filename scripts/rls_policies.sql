@@ -1,35 +1,12 @@
-"""Script para generar SQL de políticas Row Level Security (RLS)."""
 
-import sys
-from pathlib import Path
-
-# Añadir la raíz del proyecto al path para que se encuentre el módulo 'app'
-_project_root = Path(__file__).resolve().parent.parent
-if str(_project_root) not in sys.path:
-    sys.path.insert(0, str(_project_root))
-
-from app.config import settings
-
-
-def generate_rls_sql() -> str:
-    """
-    Genera el SQL necesario para activar RLS en PostgreSQL.
-
-    Returns:
-        str: SQL completo con todas las políticas RLS.
-    """
-    tenant_column = settings.tenant_id_column_name
-    setting_name = settings.rls_setting_name
-
-    sql = f"""
 -- =====================================================
 -- Script de Row Level Security (RLS) para Multi-tenant
 -- =====================================================
 -- Este script debe ejecutarse como superusuario en PostgreSQL
 -- 
 -- Configuración:
---   - Columna de tenant: {tenant_column}
---   - Variable de sesión: {setting_name}
+--   - Columna de tenant: tenant_id
+--   - Variable de sesión: app.current_tenant
 -- =====================================================
 
 -- Habilitar la extensión para variables de sesión personalizadas (si es necesario)
@@ -54,7 +31,7 @@ CREATE POLICY companies_select_policy ON companies
         current_setting('is_superuser', true) = 'on'
         OR
         -- Permitir si el tenant_id coincide con la variable de sesión
-        {tenant_column} = current_setting('{setting_name}', true)
+        tenant_id = current_setting('app.current_tenant', true)
     );
 
 -- =====================================================
@@ -70,7 +47,7 @@ CREATE POLICY companies_insert_policy ON companies
         current_setting('is_superuser', true) = 'on'
         OR
         -- Permitir si el tenant_id del nuevo registro coincide con la variable de sesión
-        {tenant_column} = current_setting('{setting_name}', true)
+        tenant_id = current_setting('app.current_tenant', true)
     );
 
 -- =====================================================
@@ -86,14 +63,14 @@ CREATE POLICY companies_update_policy ON companies
         current_setting('is_superuser', true) = 'on'
         OR
         -- Permitir si el tenant_id coincide con la variable de sesión
-        {tenant_column} = current_setting('{setting_name}', true)
+        tenant_id = current_setting('app.current_tenant', true)
     )
     WITH CHECK (
         -- Permitir si el usuario es superusuario
         current_setting('is_superuser', true) = 'on'
         OR
         -- Permitir si el tenant_id del registro actualizado coincide con la variable de sesión
-        {tenant_column} = current_setting('{setting_name}', true)
+        tenant_id = current_setting('app.current_tenant', true)
     );
 
 -- =====================================================
@@ -109,14 +86,14 @@ CREATE POLICY companies_delete_policy ON companies
         current_setting('is_superuser', true) = 'on'
         OR
         -- Permitir si el tenant_id coincide con la variable de sesión
-        {tenant_column} = current_setting('{setting_name}', true)
+        tenant_id = current_setting('app.current_tenant', true)
     );
 
 -- =====================================================
 -- NOTAS IMPORTANTES:
 -- =====================================================
 -- 1. Las políticas anteriores asumen que la variable de sesión
---    '{setting_name}' se establece ANTES de cada consulta.
+--    'app.current_tenant' se establece ANTES de cada consulta.
 --    Esto se hace automáticamente en el SessionManager de la aplicación.
 --
 -- 2. Para otras tablas que hereden de TenantAwareModel, deberás
@@ -124,7 +101,7 @@ CREATE POLICY companies_delete_policy ON companies
 --
 -- 3. Para verificar que RLS está funcionando:
 --    - Conecta como usuario de aplicación (no superusuario)
---    - Ejecuta: SET LOCAL {setting_name} = 'test-tenant-id';
+--    - Ejecuta: SET LOCAL app.current_tenant = 'test-tenant-id';
 --    - Intenta SELECT * FROM companies;
 --    - Solo deberías ver registros con tenant_id = 'test-tenant-id'
 --
@@ -137,27 +114,3 @@ CREATE POLICY companies_delete_policy ON companies
 --    DROP POLICY IF EXISTS companies_update_policy ON companies;
 --    DROP POLICY IF EXISTS companies_insert_policy ON companies;
 -- =====================================================
-"""
-
-    return sql
-
-
-def main() -> None:
-    """Función principal que genera y guarda el SQL."""
-    sql = generate_rls_sql()
-
-    # Guardar en archivo
-    output_file = Path("scripts/rls_policies.sql")
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write(sql)
-
-    print(f"✅ SQL de políticas RLS generado en: {output_file}")
-    print("\n📋 Para aplicar las políticas, ejecuta:")
-    print(f"   psql -h {settings.db_host} -U {settings.db_user} -d {settings.db_name} -f {output_file}")
-    print("\n⚠️  IMPORTANTE: Debes ejecutar este script como superusuario de PostgreSQL")
-
-
-if __name__ == "__main__":
-    main()
