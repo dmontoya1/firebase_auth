@@ -3,19 +3,82 @@
 import logging
 from typing import Annotated
 
-import firebase_admin
-from firebase_admin import auth
+from firebase_admin import tenant_mgt
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import SessionManager
 from app.models.company import Company
-from app.schemas.onboarding import OnboardingRequest, OnboardingResponse
+from app.schemas.onboarding import (
+    OnboardingRequest,
+    OnboardingResponse,
+    TenantInfo,
+    TenantsListResponse,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
+
+
+@router.get(
+    "/tenants",
+    response_model=TenantsListResponse,
+    summary="Listar tenants",
+    description="Lista todos los tenants del proyecto en Identity Platform. Útil para verificar que el registro de compañía creó el tenant correctamente.",
+)
+async def list_tenants() -> TenantsListResponse:
+    """
+    Lista los tenants existentes en Google Cloud Identity Platform.
+
+    Returns:
+        TenantsListResponse: Lista de tenant_id y display_name.
+    """
+    try:
+        page = tenant_mgt.list_tenants(max_results=100)
+        tenants: list[TenantInfo] = []
+        for tenant in page.iterate_all():
+            tenants.append(
+                TenantInfo(tenant_id=tenant.tenant_id, display_name=tenant.display_name)
+            )
+        return TenantsListResponse(tenants=tenants)
+    except Exception as e:
+        logger.error(f"Error al listar tenants: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al listar tenants: {str(e)}",
+        )
+
+
+@router.patch(
+    "/tenants/{tenant_id}/enable-password-sign-in",
+    summary="Habilitar login con contraseña en un tenant",
+    description="Habilita el inicio de sesión con email/contraseña en un tenant existente. Útil si obtuviste PASSWORD_LOGIN_DISABLED al hacer login.",
+)
+async def enable_password_sign_in(tenant_id: str) -> dict:
+    """
+    Habilita allow_password_sign_up en el tenant para permitir login con email/contraseña.
+
+    Args:
+        tenant_id: ID del tenant (ej. el que devolvió register-company).
+
+    Returns:
+        Mensaje de confirmación.
+    """
+    try:
+        tenant_mgt.update_tenant(tenant_id, allow_password_sign_up=True)
+        logger.info(f"Password sign-in habilitado para tenant: {tenant_id}")
+        return {
+            "message": "Login con email/contraseña habilitado para este tenant",
+            "tenant_id": tenant_id,
+        }
+    except Exception as e:
+        logger.error(f"Error al habilitar password sign-in para {tenant_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
 
 
 @router.post(
@@ -52,8 +115,9 @@ async def register_company(
         # Paso 1: Crear tenant en Google Cloud Identity Platform
         logger.info(f"Creando tenant en Identity Platform para: {request_data.company_name}")
         try:
-            tenant = auth.create_tenant(
-                display_name=request_data.company_display_name or request_data.company_name
+            tenant = tenant_mgt.create_tenant(
+                display_name=request_data.company_display_name or request_data.company_name,
+                allow_password_sign_up=True,  # Necesario para login con email/contraseña
             )
             tenant_id = tenant.tenant_id
             logger.info(f"Tenant creado exitosamente: {tenant_id}")
@@ -89,7 +153,7 @@ async def register_company(
             # Rollback: Eliminar tenant de Identity Platform
             if tenant_id:
                 try:
-                    auth.delete_tenant(tenant_id)
+                    tenant_mgt.delete_tenant(tenant_id)
                     logger.info(f"Tenant {tenant_id} eliminado debido a error en DB")
                 except Exception as delete_error:
                     logger.error(
@@ -103,11 +167,11 @@ async def register_company(
         # Paso 3: Crear usuario administrador dentro del tenant
         logger.info(f"Creando usuario administrador: {request_data.admin_user.email}")
         try:
-            admin_user = auth.create_user(
+            tenant_auth = tenant_mgt.auth_for_tenant(tenant_id)
+            admin_user = tenant_auth.create_user(
                 email=request_data.admin_user.email,
                 password=request_data.admin_user.password,
                 display_name=request_data.admin_user.display_name,
-                tenant_id=tenant_id,
             )
             admin_user_id = admin_user.uid
             logger.info(f"Usuario administrador creado exitosamente: {admin_user_id}")
@@ -128,7 +192,7 @@ async def register_company(
                             await db.commit()
 
                     # Eliminar tenant de Identity Platform
-                    auth.delete_tenant(tenant_id)
+                    tenant_mgt.delete_tenant(tenant_id)
                     logger.info(
                         f"Rollback completado: empresa y tenant {tenant_id} eliminados"
                     )
@@ -158,7 +222,7 @@ async def register_company(
         # Rollback final por si acaso
         if tenant_id:
             try:
-                auth.delete_tenant(tenant_id)
+                tenant_mgt.delete_tenant(tenant_id)
             except Exception:
                 pass
         raise HTTPException(

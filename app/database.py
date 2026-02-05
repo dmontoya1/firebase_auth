@@ -1,6 +1,7 @@
 """Gestión de conexiones a la base de datos con soporte RLS."""
 
 import contextlib
+import re
 from typing import AsyncGenerator, Optional
 
 from sqlalchemy import event, text
@@ -35,6 +36,19 @@ AsyncSessionLocal = async_sessionmaker(
 )
 
 
+# Formato esperado de tenant_id (Firebase/Identity Platform: alfanumérico y guiones)
+_TENANT_ID_PATTERN = re.compile(r"^[a-zA-Z0-9\-_]+$")
+
+
+def _safe_rls_value(value: str) -> str:
+    """Escapa un valor para usarlo como literal en SET LOCAL (evita SQL injection)."""
+    if not _TENANT_ID_PATTERN.match(value):
+        raise ValueError(
+            f"tenant_id inválido: solo se permiten letras, números, guiones y guión bajo."
+        )
+    return value.replace("'", "''")
+
+
 class SessionManager:
     """
     Gestor de sesiones que ejecuta automáticamente SET app.current_tenant
@@ -67,12 +81,14 @@ class SessionManager:
                 "Asegúrate de que el middleware de autenticación lo haya configurado."
             )
 
+        safe_value = _safe_rls_value(self.tenant_id)
+        rls_name = settings.rls_setting_name
+        # SET LOCAL no acepta parámetros ($1) en PostgreSQL; el valor debe ser literal.
+        set_sql = text(f"SET LOCAL {rls_name} = '{safe_value}'")
+
         async with AsyncSessionLocal() as session:
             # Establecer el tenant en la sesión de PostgreSQL para RLS
-            await session.execute(
-                text(f"SET LOCAL {settings.rls_setting_name} = :tenant_id"),
-                {"tenant_id": self.tenant_id},
-            )
+            await session.execute(set_sql)
 
             try:
                 yield session

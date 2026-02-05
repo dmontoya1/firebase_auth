@@ -7,11 +7,11 @@ Muestra cómo usar las dependencias para obtener sesiones de DB con RLS.
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies import get_db_with_tenant
+from app.dependencies import get_db_with_tenant, get_tenant_id
 from app.models.company import Company
 from app.schemas.company import CompanyResponse
 
@@ -21,6 +21,7 @@ router = APIRouter(prefix="/example", tags=["example"])
 @router.get("/my-company", response_model=CompanyResponse)
 async def get_my_company(
     db: Annotated[AsyncSession, Depends(get_db_with_tenant)],
+    tenant_id: Annotated[str, Depends(get_tenant_id)],
 ) -> CompanyResponse:
     """
     Ejemplo de endpoint que requiere autenticación y usa RLS.
@@ -33,6 +34,7 @@ async def get_my_company(
 
     Args:
         db: Sesión de base de datos con RLS configurado para el tenant del usuario.
+        tenant_id: ID del tenant del token (para mensajes de error).
 
     Returns:
         CompanyResponse: Información de la empresa del tenant actual.
@@ -45,10 +47,13 @@ async def get_my_company(
     company = result.scalar_one_or_none()
 
     if not company:
-        from fastapi import HTTPException
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Empresa no encontrada",
+            detail=(
+                "Empresa no encontrada para tu tenant. "
+                "Asegúrate de haber registrado una compañía (POST /onboarding/register-company) "
+                "y de usar en el login el mismo tenant_id que devolvió el registro."
+            ),
         )
 
     return CompanyResponse.model_validate(company)

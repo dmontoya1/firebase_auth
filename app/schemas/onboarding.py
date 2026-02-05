@@ -37,3 +37,16 @@ class OnboardingResponse(BaseModel):
     company_id: str = Field(..., description="ID de la empresa en la base de datos")
     admin_user_id: str = Field(..., description="ID del usuario administrador creado")
     message: str = Field(..., description="Mensaje de confirmación")
+
+
+class TenantInfo(BaseModel):
+    """Esquema de un tenant para listado."""
+
+    tenant_id: str = Field(..., description="ID del tenant en Identity Platform")
+    display_name: str = Field(..., description="Nombre para mostrar del tenant")
+
+
+class TenantsListResponse(BaseModel):
+    """Esquema de respuesta del listado de tenants."""
+
+    tenants: list[TenantInfo] = Field(..., description="Lista de tenants del proyecto")

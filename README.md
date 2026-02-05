@@ -210,6 +210,50 @@ En la carpeta `postman/` hay una colección para probar el flujo completo:
 
 Ver `postman/README.md` para más detalles.
 
+### Ver tenants y usuarios en las consolas
+
+**Fuente de verdad: la API**
+
+Si `GET /onboarding/tenants` devuelve tu tenant, **el tenant está creado correctamente** en Identity Platform. En muchos proyectos, la lista de tenants y usuarios en las consolas de Google Cloud y Firebase **no se actualiza bien** o tarda mucho; es un comportamiento conocido. Puedes confiar en la API como fuente de verdad.
+
+```bash
+curl http://localhost:8000/onboarding/tenants
+```
+
+**Si la consola de Google Cloud no muestra tenants**
+
+- Entra por: **Seguridad** → **Identity Platform** (o **Customer Identity**) → **Tenants**, o usa la URL: [Identity Platform → Tenants](https://console.cloud.google.com/customer-identity/tenants?project=metis-vertex-dev).
+- Comprueba que el proyecto seleccionado sea **metis-vertex-dev**.
+- Prueba **refrescar** (F5) o **modo incógnito** por si la caché afecta.
+- Si sigue vacía pero la API sí devuelve tenants, es habitual: los tenants creados por API existen; la UI a veces no los refleja. No hace falta hacer nada más para que la app funcione.
+
+**Si la consola de Firebase no muestra usuarios**
+
+- En **Authentication → Users**, con multi-tenant suele mostrarse solo el **tenant por defecto** ("Default"), que está vacío.
+- Busca un **selector de tenant** (desplegable tipo "Usuario predeterminado" o "Scope to a tenant") y elige el tenant cuyo ID devolvió el registro (ej. `mi-empresas-sas-zfzbu`). Solo entonces se listan los usuarios de ese tenant.
+- En algunos proyectos ese selector no aparece o la lista no se actualiza. Los usuarios **sí existen** en Identity Platform dentro del tenant; la comprobación real es que el **login** con ese email, contraseña y `tenantId` funcione (por ejemplo con Postman: Login Firebase usando el `tenant_id` guardado).
+
+**Resumen:** Si `GET /onboarding/tenants` muestra tu tenant y el login del administrador con ese `tenantId` funciona, todo está correcto aunque las consolas no muestren nada.
+
+**Si obtienes PASSWORD_LOGIN_DISABLED al hacer login**
+
+Significa que el inicio de sesión con email/contraseña está deshabilitado en ese tenant.
+
+- **Tenants nuevos:** Desde ahora, al registrar una compañía el tenant se crea con login por contraseña habilitado.
+- **Tenant que ya creaste:** Llama a este endpoint pasando tu `tenant_id` (el que devolvió el registro):
+
+  ```bash
+  PATCH http://localhost:8000/onboarding/tenants/{tenant_id}/enable-password-sign-in
+  ```
+
+  Ejemplo: si tu tenant_id es `mi-empresas-sas-zfzbu`:
+
+  ```bash
+  curl -X PATCH http://localhost:8000/onboarding/tenants/mi-empresas-sas-zfzbu/enable-password-sign-in
+  ```
+
+  Después de eso, vuelve a intentar el login en Postman.
+
 ### Documentación API
 
 - **Swagger UI**: http://localhost:8000/docs
@@ -222,6 +266,22 @@ Ver `postman/README.md` para más detalles.
 ```bash
 GET /health
 ```
+
+### Listar tenants (Identity Platform)
+
+```bash
+GET /onboarding/tenants
+```
+
+Devuelve la lista de tenants del proyecto. Útil para verificar que el registro de compañía creó el tenant correctamente cuando no aparece en la consola.
+
+### Habilitar login con contraseña en un tenant (PASSWORD_LOGIN_DISABLED)
+
+```bash
+PATCH /onboarding/tenants/{tenant_id}/enable-password-sign-in
+```
+
+Habilita el inicio de sesión con email/contraseña en un tenant existente. Usa este endpoint si al hacer login obtienes el error `PASSWORD_LOGIN_DISABLED`. Sustituye `{tenant_id}` por el ID de tu tenant (ej. el que devolvió `register-company`).
 
 ### Onboarding de Empresa
 
